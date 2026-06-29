@@ -76,6 +76,9 @@ export class EvolutionScene extends Phaser.Scene {
     this.chosen = true
     this.bus.emit('MUTATION_CHOSEN', { mutationId: mutation.id, toStageId: this.toStageId })
     this.cards.forEach((c) => c.setHighlighted(false))
-    this.time.delayedCall(180, () => this.scene.stop())
+    this.time.delayedCall(180, () => {
+      this.bus.emit('EVOLUTION_CLOSED', {})
+      this.scene.stop()
+    })
   }
 }

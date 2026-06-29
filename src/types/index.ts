@@ -321,6 +321,7 @@ export interface GameEventPayloads {
   HAZARD_BURST: { kind: HazardKind; warningMs: number; zones: HazardZone[] }
   GAME_PAUSED: Record<string, never>
   GAME_RESUMED: Record<string, never>
+  EVOLUTION_CLOSED: Record<string, never>
   PLAYER_DIED: { cause: DeathCause; summary: RunResult }
   GAME_WON: { summary: RunResult }
   ABILITY_USED: { ability: AbilityId; cooldownMs: number }

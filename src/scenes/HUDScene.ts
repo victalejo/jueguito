@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { COLORS, STAGE_COUNT, TEX, VIEW } from '@/config/constants'
+import { getAudio } from '@/core/audio'
 import { EventBus, subscribe } from '@/core/EventBus'
 import { REGISTRY } from '@/core/registryKeys'
 import { getMutation } from '@/data/mutations'
@@ -32,6 +33,7 @@ export class HUDScene extends Phaser.Scene {
   private vignetteLow!: Phaser.GameObjects.Image
 
   private energyFrac = 1
+  private lowEnergySfxMs = 0
   private unsubscribe?: () => void
 
   constructor() {
@@ -144,7 +146,10 @@ export class HUDScene extends Phaser.Scene {
       },
       WAVE_STARTED: ({ waveIndex }) => {
         this.waveText.setText(`OLEADA ${waveIndex}`)
-        if (waveIndex > 1) this.toast.show(`OLEADA ${waveIndex}`, COLORS.UI_TEXT, 1200)
+        if (waveIndex > 1) {
+          this.toast.show(`OLEADA ${waveIndex}`, COLORS.UI_TEXT, 1200)
+          getAudio(this.game)?.play('waveUp')
+        }
       },
       COMBO_CHANGED: ({ combo }) => {
         this.comboText.setText(combo > 1 ? `Combo x${combo}` : '')
@@ -174,13 +179,19 @@ export class HUDScene extends Phaser.Scene {
     })
   }
 
-  override update(time: number): void {
-    // Low-energy heartbeat vignette.
+  override update(time: number, delta: number): void {
+    // Low-energy heartbeat: red vignette pulse + throttled audio heartbeat.
     if (this.energyFrac < 0.25) {
       const pulse = 0.12 + 0.1 * (0.5 + 0.5 * Math.sin(time * 0.008))
       this.vignetteLow.setAlpha(pulse * (1 - this.energyFrac / 0.25))
+      this.lowEnergySfxMs -= delta
+      if (this.lowEnergySfxMs <= 0) {
+        this.lowEnergySfxMs = 1800
+        getAudio(this.game)?.play('lowEnergy')
+      }
     } else {
       this.vignetteLow.setAlpha(0)
+      this.lowEnergySfxMs = 0
     }
   }
 }

@@ -34,6 +34,8 @@ interface HazardInstance {
   graphics: Phaser.GameObjects.Graphics
   phase: 'warn' | 'active'
   timer: number
+  /** Whether this hazard has already landed its one-shot hit (non-acid). */
+  hit: boolean
 }
 
 const HAZARD_COLOR: Record<HazardKind, number> = {
@@ -158,7 +160,8 @@ export class GameScene extends Phaser.Scene {
     const onNutrient = (p: GameEventPayloads['NUTRIENT_COLLECTED']): void => {
       this.nutrientsEaten++
       this.particles.burst(p.x, p.y, { count: 10, color: COLORS.WHITE, speed: 130, lifespan: 360, scale: 0.6 })
-      getAudio(this.game)?.play('eat', { combo: this.player.getCombo() })
+      const rare = p.kind === 'atp_globule' || p.kind === 'prebiotic_gem' || p.kind === 'protein_cluster'
+      getAudio(this.game)?.play(rare ? 'rare' : 'eat', { combo: this.player.getCombo() })
     }
     const onDamaged = (p: GameEventPayloads['PLAYER_DAMAGED']): void => {
       if (p.amount < 0.5) return
@@ -241,8 +244,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private checkVictory(delta: number): void {
+    // Reaching the apex stage starts the survival countdown immediately, and
+    // the HUD shows it via VICTORY_PROGRESS — no hidden biomass grind required.
     if (this.player.getStageId() < FINAL_STAGE_ID) return
-    if (this.player.getBiomass() < getStage(FINAL_STAGE_ID).biomassToEvolve) return
     this.victoryHoldMs += delta
     const need = BALANCE.VICTORY_HOLD_SECONDS_AT_FINAL_STAGE
     this.bus.emit('VICTORY_PROGRESS', {
@@ -299,7 +303,7 @@ export class GameScene extends Phaser.Scene {
       g.strokeCircle(zone.x, zone.y, zone.r)
       g.fillStyle(color, 0.08)
       g.fillCircle(zone.x, zone.y, zone.r)
-      this.hazards.push({ x: zone.x, y: zone.y, r: zone.r, kind: p.kind, graphics: g, phase: 'warn', timer: p.warningMs })
+      this.hazards.push({ x: zone.x, y: zone.y, r: zone.r, kind: p.kind, graphics: g, phase: 'warn', timer: p.warningMs, hit: false })
     }
   }
 
@@ -326,8 +330,10 @@ export class GameScene extends Phaser.Scene {
           const kind = HAZARD_THREAT[h.kind]
           if (h.kind === 'acid') {
             this.player.takeDamage(HAZARD_DAMAGE.acid * dt, kind, h.x, h.y, true)
-          } else {
-            this.player.takeDamage(HAZARD_DAMAGE[h.kind], kind, h.x, h.y)
+          } else if (!h.hit) {
+            // One-shot, i-frame-independent: a prior contact must not cancel it.
+            h.hit = true
+            this.player.takeDamage(HAZARD_DAMAGE[h.kind], kind, h.x, h.y, true)
           }
         }
         if (h.timer <= 0) {
@@ -341,6 +347,20 @@ export class GameScene extends Phaser.Scene {
   // ----------------------------------------------------------------- fx & control
 
   private playEvolveFx(): void {
+    const burst = this.add
+      .image(this.player.x, this.player.y, TEX.EVOLVE_BURST)
+      .setDepth(DEPTHS.FX)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setAlpha(0.9)
+      .setScale(0.1)
+    this.tweens.add({
+      targets: burst,
+      scale: 2,
+      alpha: 0,
+      duration: 520,
+      ease: 'Cubic.easeOut',
+      onComplete: () => burst.destroy(),
+    })
     this.particles.ring(this.player.x, this.player.y, 0xffffff, 160, 520)
     if (!this.reduceMotion) {
       this.cameras.main.flash(280, 255, 255, 255)

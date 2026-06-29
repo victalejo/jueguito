@@ -9,6 +9,9 @@ dist-ssr/
 .vite/
 *.local
 
+# Playwright smoke-test artifacts
+.playwright-mcp/
+
 # Logs
 *.log
 npm-debug.log*

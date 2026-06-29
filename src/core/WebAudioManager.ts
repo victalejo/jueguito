@@ -127,7 +127,8 @@ export class WebAudioManager implements AudioManager {
   /** Push the current muted/volume state onto the master gain with a tiny ramp. */
   private applyMasterGain(): void {
     if (!this.ctx || !this.master) return
-    const target = this.muted ? 0 : BASE_MASTER_GAIN * this.volume
+    // Ramp to a tiny epsilon rather than hard 0 to avoid a click on some browsers.
+    const target = this.muted ? 0.0001 : BASE_MASTER_GAIN * this.volume
     const now = this.ctx.currentTime
     const g = this.master.gain
     g.cancelScheduledValues(now)

@@ -75,6 +75,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private comboMs = 0
   private ageMs = 0
   private starveTickMs = 0
+  private lastSprinting = false
 
   constructor(
     scene: Phaser.Scene,
@@ -223,6 +224,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     vy *= dragFactor
 
     const sprinting = input.sprinting && this.energy > 0
+    this.lastSprinting = sprinting
     let max = this.stats.maxSpeed
     if (sprinting) max *= BALANCE.SPRINT_SPEED_MULTIPLIER
     if (this.speedBoostMs > 0) max *= 1 + BALANCE.SPEED_BOOST_FROM_MINERAL_MULT
@@ -249,11 +251,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   private metabolism(dt: number): void {
-    const before = this.energy
-    this.energy -= this.stats.energyDrainPerSecond * dt
-    this.energy += this.modifiers.passiveEnergyRegen * dt
-    if (this.stage.id >= 3) this.energy += 1.0 * dt // mitochondrial regen
-    this.energy = clamp(this.energy, 0, this.maxEnergy)
+    const drain =
+      this.stats.energyDrainPerSecond +
+      (this.lastSprinting ? BALANCE.SPRINT_ENERGY_DRAIN_PER_SECOND : 0)
+    const regen = this.modifiers.passiveEnergyRegen + (this.stage.id >= 3 ? 1.0 : 0)
+    // Regen blunts hunger but never fully cancels it — a minimum net drain keeps
+    // the feeding loop alive even with stacked regen mutations.
+    const net = Math.max(0.25, drain - regen)
+    this.energy = clamp(this.energy - net * dt, 0, this.maxEnergy)
 
     // Health regen mutation while well-fed.
     if (this.modifiers.healthRegen > 0 && this.energy > this.maxEnergy * 0.5) {
@@ -277,9 +282,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
       this.emitHealth()
       if (this.health <= 0) this.die('starvation')
-    }
-    if (this.energy !== before && this.energy > 0) {
-      /* energy changes are emitted by emitEnergy() each frame */
     }
   }
 

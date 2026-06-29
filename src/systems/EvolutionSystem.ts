@@ -18,6 +18,11 @@ export class EvolutionSystem {
   private readonly onChosen = (p: GameEventPayloads['MUTATION_CHOSEN']): void => {
     this.applyChoice(p)
   }
+  // `evolving` stays true through the whole transition; it only clears once the
+  // picker overlay has fully closed, so update() can't re-trigger mid-animation.
+  private readonly onClosed = (): void => {
+    this.evolving = false
+  }
 
   constructor(
     private readonly bus: EventBus,
@@ -25,6 +30,7 @@ export class EvolutionSystem {
     private readonly save: SaveSystem,
   ) {
     bus.on('MUTATION_CHOSEN', this.onChosen)
+    bus.on('EVOLUTION_CLOSED', this.onClosed)
   }
 
   update(): void {
@@ -60,7 +66,8 @@ export class EvolutionSystem {
       stageName: nextStage.name,
       stats: this.player.getStats(),
     })
-    this.evolving = false
+    // NOTE: `evolving` is intentionally NOT cleared here — it is cleared by
+    // onClosed() when EvolutionScene emits EVOLUTION_CLOSED after its animation.
   }
 
   isEvolving(): boolean {
@@ -69,5 +76,6 @@ export class EvolutionSystem {
 
   destroy(): void {
     this.bus.off('MUTATION_CHOSEN', this.onChosen)
+    this.bus.off('EVOLUTION_CLOSED', this.onClosed)
   }
 }

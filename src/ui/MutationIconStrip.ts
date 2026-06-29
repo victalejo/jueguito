@@ -50,7 +50,7 @@ export class MutationIconStrip extends Phaser.GameObjects.Container {
       const cx = this.nextX
 
       // Soft glow halo behind the icon (additive for a luminous look).
-      const glow = this.scene.add.image(cx, 0, this.resolveTexture(mutation.iconKey))
+      const glow = this.scene.add.image(cx, 0, this.resolveTexture('soft_glow'))
       glow.setDisplaySize(ICON_SIZE * 1.7, ICON_SIZE * 1.7)
       glow.setTint(GLOW_COLOR)
       glow.setAlpha(0.0)
