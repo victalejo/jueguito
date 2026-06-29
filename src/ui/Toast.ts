@@ -42,7 +42,7 @@ export class Toast extends Phaser.GameObjects.Container {
   private readonly queue: ToastRequest[] = []
 
   /** Currently animating toast objects (text + its backing), newest last. */
-  private readonly active: Phaser.GameObjects.Container[] = []
+  private readonly activeToasts: Phaser.GameObjects.Container[] = []
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y)
@@ -55,7 +55,7 @@ export class Toast extends Phaser.GameObjects.Container {
    */
   show(text: string, color: number = COLORS.UI_TEXT, durationMs: number = TOAST.DEFAULT_HOLD_MS): void {
     // Guard against destruction races: if the container or scene is gone, drop.
-    if (!this.scene || !this.active) return
+    if (!this.scene || !this.activeToasts) return
 
     const safeText = (text ?? '').toString().trim() || ' '
     const safeColor = Number.isFinite(color) ? color : COLORS.UI_TEXT
@@ -67,7 +67,7 @@ export class Toast extends Phaser.GameObjects.Container {
 
   /** Promote queued toasts into visible slots while capacity allows. */
   private pump(): void {
-    while (this.queue.length > 0 && this.active.length < TOAST.MAX_VISIBLE) {
+    while (this.queue.length > 0 && this.activeToasts.length < TOAST.MAX_VISIBLE) {
       const request = this.queue.shift()
       if (!request) break
       this.spawn(request)
@@ -109,12 +109,12 @@ export class Toast extends Phaser.GameObjects.Container {
     item.add(label)
 
     // Stack newcomers below existing toasts so a burst fans out vertically.
-    const slot = this.active.length
+    const slot = this.activeToasts.length
     const restY = slot * TOAST.STACK_OFFSET
     item.setY(restY + TOAST.RISE_DISTANCE)
 
     this.add(item)
-    this.active.push(item)
+    this.activeToasts.push(item)
 
     // Rise + fade in.
     scene.tweens.add({
@@ -144,12 +144,12 @@ export class Toast extends Phaser.GameObjects.Container {
 
   /** Remove a finished toast, destroy it, then let the queue advance. */
   private retire(item: Phaser.GameObjects.Container): void {
-    const index = this.active.indexOf(item)
-    if (index !== -1) this.active.splice(index, 1)
+    const index = this.activeToasts.indexOf(item)
+    if (index !== -1) this.activeToasts.splice(index, 1)
     if (item.scene) item.destroy()
 
     // Slide remaining toasts up to close the gap left behind.
-    this.active.forEach((active, slot) => {
+    this.activeToasts.forEach((active, slot) => {
       if (!active.scene || !this.scene) return
       this.scene.tweens.add({
         targets: active,
@@ -171,7 +171,7 @@ export class Toast extends Phaser.GameObjects.Container {
   /** Clean up queue + active toasts when the container is destroyed. */
   destroy(fromScene?: boolean): void {
     this.queue.length = 0
-    this.active.length = 0
+    this.activeToasts.length = 0
     super.destroy(fromScene)
   }
 }

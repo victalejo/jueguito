@@ -36,8 +36,8 @@ export class Button extends Phaser.GameObjects.Container {
   private readonly labelText: Phaser.GameObjects.Text
   private readonly hotkeyBadge?: Phaser.GameObjects.Text
 
-  private readonly w: number
-  private readonly h: number
+  private readonly bw: number
+  private readonly bh: number
   private readonly primary: boolean
   private readonly onClick: () => void
 
@@ -56,17 +56,15 @@ export class Button extends Phaser.GameObjects.Container {
   ) {
     super(scene, x, y)
 
-    this.w = opts.width ?? DEFAULTS.WIDTH
-    this.h = opts.height ?? DEFAULTS.HEIGHT
+    this.bw = opts.width ?? DEFAULTS.WIDTH
+    this.bh = opts.height ?? DEFAULTS.HEIGHT
     this.primary = opts.primary ?? false
     this.onClick = onClick
 
-    // --- Body graphics (glow + fill + border), drawn once, redrawn on state.
     this.bg = scene.add.graphics()
     this.add(this.bg)
     this.drawBody(false)
 
-    // --- Centered label.
     this.labelText = scene.add
       .text(0, 0, label, {
         fontFamily: 'system-ui, sans-serif',
@@ -79,10 +77,9 @@ export class Button extends Phaser.GameObjects.Container {
       .setResolution(2)
     this.add(this.labelText)
 
-    // --- Optional hotkey badge pinned to the top-right corner.
     if (opts.hotkey) {
       this.hotkeyBadge = scene.add
-        .text(this.w / 2 - 10, -this.h / 2 + 10, opts.hotkey, {
+        .text(this.bw / 2 - 10, -this.bh / 2 + 10, opts.hotkey, {
           fontFamily: 'system-ui, sans-serif',
           fontSize: `${Math.round((opts.fontSize ?? DEFAULTS.FONT_SIZE) * 0.6)}px`,
           fontStyle: 'bold',
@@ -94,10 +91,9 @@ export class Button extends Phaser.GameObjects.Container {
       this.add(this.hotkeyBadge)
     }
 
-    // --- Hit area + pointer wiring.
-    this.setSize(this.w, this.h)
+    this.setSize(this.bw, this.bh)
     this.setInteractive(
-      new Phaser.Geom.Rectangle(-this.w / 2, -this.h / 2, this.w, this.h),
+      new Phaser.Geom.Rectangle(-this.bw / 2, -this.bh / 2, this.bw, this.bh),
       Phaser.Geom.Rectangle.Contains,
     )
     this.wireInput()
@@ -120,12 +116,11 @@ export class Button extends Phaser.GameObjects.Container {
     this.isEnabled = enabled
 
     if (enabled) {
-      this.input && (this.input.enabled = true)
+      if (this.input) this.input.enabled = true
       this.setAlpha(1)
     } else {
-      this.input && (this.input.enabled = false)
+      if (this.input) this.input.enabled = false
       this.isPressed = false
-      // Snap back to resting visuals so a half-pressed button doesn't stick.
       this.scene.tweens.killTweensOf(this)
       this.setScale(1)
       this.drawBody(false)
@@ -133,10 +128,6 @@ export class Button extends Phaser.GameObjects.Container {
     }
     return this
   }
-
-  // ---------------------------------------------------------------------------
-  // Internal: input handlers
-  // ---------------------------------------------------------------------------
 
   private wireInput(): void {
     this.on(Phaser.Input.Events.POINTER_OVER, () => {
@@ -162,14 +153,12 @@ export class Button extends Phaser.GameObjects.Container {
     this.on(Phaser.Input.Events.POINTER_UP, () => {
       if (!this.isEnabled || !this.isPressed) return
       this.isPressed = false
-      // Bounce back to the hovered scale (the pointer is still over us).
       this.tweenScale(1.05)
       getAudio(this.scene.game)?.play('uiSelect')
       this.onClick()
     })
   }
 
-  /** Tween the container to a target scale with a snappy back-ease feel. */
   private tweenScale(target: number): void {
     this.scene.tweens.killTweensOf(this)
     this.scene.tweens.add({
@@ -181,10 +170,6 @@ export class Button extends Phaser.GameObjects.Container {
     })
   }
 
-  // ---------------------------------------------------------------------------
-  // Internal: rendering
-  // ---------------------------------------------------------------------------
-
   /**
    * Redraw the rounded-rect body. `hovered` raises the glow + border intensity
    * for the "luminous microscopy" feel. Primary buttons read brighter/greener.
@@ -193,9 +178,9 @@ export class Button extends Phaser.GameObjects.Container {
     const g = this.bg
     g.clear()
 
-    const radius = Math.min(16, this.h / 2)
-    const halfW = this.w / 2
-    const halfH = this.h / 2
+    const radius = Math.min(16, this.bh / 2)
+    const halfW = this.bw / 2
+    const halfH = this.bh / 2
 
     const border = this.primary ? COLORS.UI_PANEL_BORDER : COLORS.UI_DIM
     const fill = this.primary ? COLORS.UI_PANEL_BORDER : COLORS.UI_PANEL
@@ -204,23 +189,19 @@ export class Button extends Phaser.GameObjects.Container {
     const borderAlpha = hovered ? 1 : 0.8
     const borderWidth = this.primary ? 3 : 2
 
-    // Soft outer glow: a couple of expanded, low-alpha rounded rects.
     g.fillStyle(border, glowAlpha)
-    g.fillRoundedRect(-halfW - 6, -halfH - 6, this.w + 12, this.h + 12, radius + 6)
+    g.fillRoundedRect(-halfW - 6, -halfH - 6, this.bw + 12, this.bh + 12, radius + 6)
     g.fillStyle(border, glowAlpha * 0.6)
-    g.fillRoundedRect(-halfW - 12, -halfH - 12, this.w + 24, this.h + 24, radius + 12)
+    g.fillRoundedRect(-halfW - 12, -halfH - 12, this.bw + 24, this.bh + 24, radius + 12)
 
-    // Body fill.
     g.fillStyle(fill, fillAlpha)
-    g.fillRoundedRect(-halfW, -halfH, this.w, this.h, radius)
+    g.fillRoundedRect(-halfW, -halfH, this.bw, this.bh, radius)
 
-    // Accent border.
     g.lineStyle(borderWidth, border, borderAlpha)
-    g.strokeRoundedRect(-halfW, -halfH, this.w, this.h, radius)
+    g.strokeRoundedRect(-halfW, -halfH, this.bw, this.bh, radius)
 
-    // A subtle top highlight sheen sells the translucent, glassy look.
     g.fillStyle(COLORS.WHITE, hovered ? 0.1 : 0.06)
-    g.fillRoundedRect(-halfW + 4, -halfH + 4, this.w - 8, this.h * 0.4, radius - 4)
+    g.fillRoundedRect(-halfW + 4, -halfH + 4, this.bw - 8, this.bh * 0.4, radius - 4)
   }
 }
 
