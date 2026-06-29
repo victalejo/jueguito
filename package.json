@@ -1,0 +1,20 @@
+{
+  "name": "evolucion",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Evolución — juego de supervivencia arcade: de moléculas a células. Phaser 3 + Vite + TypeScript.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0"
+  }
+}
