@@ -20,3 +20,8 @@ export const game = new Phaser.Game(
     GameOverScene,
   ]),
 )
+
+// Expose the game instance for debugging / automated smoke-tests in dev.
+if (import.meta.env.DEV) {
+  ;(window as unknown as { game: Phaser.Game }).game = game
+}
