@@ -33,7 +33,7 @@ export class SpawnSystem {
   private stageId = 0
   private waveIndex = 1
   private intensity = 1
-  private threatBudget = BALANCE.BASE_THREAT_BUDGET
+  private threatBudget: number = BALANCE.BASE_THREAT_BUDGET
 
   private readonly onWave = (p: GameEventPayloads['WAVE_STARTED']): void => {
     this.waveIndex = p.waveIndex

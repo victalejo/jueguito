@@ -9,7 +9,7 @@ export interface ThreatAgent {
   readonly speed: number
   readonly kind: ThreatKind
   /** Mutable per-threat scratch space, cleared on spawn. */
-  readonly state: Record<string, number>
+  readonly behaviorState: Record<string, number>
 }
 
 export interface BehaviorTarget {
@@ -21,15 +21,15 @@ export interface BehaviorTarget {
 export type BehaviorFn = (threat: ThreatAgent, target: BehaviorTarget, dtMs: number) => Vec2
 
 const heading = (t: ThreatAgent): number => {
-  if (t.state.heading === undefined) t.state.heading = rng.angle()
-  return t.state.heading
+  if (t.behaviorState.heading === undefined) t.behaviorState.heading = rng.angle()
+  return t.behaviorState.heading
 }
 
 const wander: BehaviorFn = (t, _target, dtMs) => {
-  t.state.turn = (t.state.turn ?? 0) - dtMs
-  if (t.state.turn <= 0) {
-    t.state.turn = rng.range(250, 700)
-    t.state.heading = heading(t) + rng.range(-1.1, 1.1)
+  t.behaviorState.turn = (t.behaviorState.turn ?? 0) - dtMs
+  if (t.behaviorState.turn <= 0) {
+    t.behaviorState.turn = rng.range(250, 700)
+    t.behaviorState.heading = heading(t) + rng.range(-1.1, 1.1)
   }
   return fromAngle(heading(t), t.speed)
 }
@@ -42,27 +42,27 @@ const chase: BehaviorFn = (t, target) => {
 }
 
 const ambushLunge: BehaviorFn = (t, target, dtMs) => {
-  t.state.cooldown = (t.state.cooldown ?? 0) - dtMs
-  t.state.lunge = (t.state.lunge ?? 0) - dtMs
+  t.behaviorState.cooldown = (t.behaviorState.cooldown ?? 0) - dtMs
+  t.behaviorState.lunge = (t.behaviorState.lunge ?? 0) - dtMs
 
-  if (t.state.lunge > 0) {
-    return fromAngle(t.state.lungeDir ?? 0, t.speed)
+  if (t.behaviorState.lunge > 0) {
+    return fromAngle(t.behaviorState.lungeDir ?? 0, t.speed)
   }
   const d = dist(t.x, t.y, target.x, target.y)
-  if (d < 320 && t.state.cooldown <= 0) {
-    t.state.lungeDir = angleTo(t.x, t.y, target.x, target.y)
-    t.state.lunge = 420
-    t.state.cooldown = 1600
-    return fromAngle(t.state.lungeDir, t.speed)
+  if (d < 320 && t.behaviorState.cooldown <= 0) {
+    t.behaviorState.lungeDir = angleTo(t.x, t.y, target.x, target.y)
+    t.behaviorState.lunge = 420
+    t.behaviorState.cooldown = 1600
+    return fromAngle(t.behaviorState.lungeDir, t.speed)
   }
   // Dormant: slow shimmer drift.
   return fromAngle(heading(t), t.speed * 0.18)
 }
 
 const packFlank: BehaviorFn = (t, target) => {
-  if (t.state.flank === undefined) t.state.flank = rng.sign()
+  if (t.behaviorState.flank === undefined) t.behaviorState.flank = rng.sign()
   const toTarget = angleTo(t.x, t.y, target.x, target.y)
-  const flankAngle = toTarget + t.state.flank * 0.8
+  const flankAngle = toTarget + t.behaviorState.flank * 0.8
   const aimX = target.x + Math.cos(flankAngle) * (target.radius + 60)
   const aimY = target.y + Math.sin(flankAngle) * (target.radius + 60)
   const dir = normalize(aimX - t.x, aimY - t.y)
@@ -71,22 +71,22 @@ const packFlank: BehaviorFn = (t, target) => {
 
 const trailHazard: BehaviorFn = (t, target, dtMs) => {
   // Medusa-like slow pulsing pursuit.
-  t.state.pulse = (t.state.pulse ?? 0) + dtMs
-  const pulse = 0.6 + 0.4 * Math.sin(t.state.pulse * 0.004)
+  t.behaviorState.pulse = (t.behaviorState.pulse ?? 0) + dtMs
+  const pulse = 0.6 + 0.4 * Math.sin(t.behaviorState.pulse * 0.004)
   const dir = normalize(target.x - t.x, target.y - t.y)
   return { x: dir.x * t.speed * pulse, y: dir.y * t.speed * pulse }
 }
 
 const smartHunter: BehaviorFn = (t, target, dtMs) => {
-  t.state.dash = (t.state.dash ?? 0) - dtMs
-  t.state.dashCd = (t.state.dashCd ?? 0) - dtMs
+  t.behaviorState.dash = (t.behaviorState.dash ?? 0) - dtMs
+  t.behaviorState.dashCd = (t.behaviorState.dashCd ?? 0) - dtMs
   const dir = normalize(target.x - t.x, target.y - t.y)
-  if (t.state.dash > 0) {
+  if (t.behaviorState.dash > 0) {
     return { x: dir.x * t.speed * 2.4, y: dir.y * t.speed * 2.4 }
   }
-  if (t.state.dashCd <= 0 && dist(t.x, t.y, target.x, target.y) < 360) {
-    t.state.dash = 300
-    t.state.dashCd = 2200
+  if (t.behaviorState.dashCd <= 0 && dist(t.x, t.y, target.x, target.y) < 360) {
+    t.behaviorState.dash = 300
+    t.behaviorState.dashCd = 2200
   }
   return { x: dir.x * t.speed, y: dir.y * t.speed }
 }

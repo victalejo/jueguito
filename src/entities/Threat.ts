@@ -13,7 +13,7 @@ export class Threat extends Phaser.Physics.Arcade.Sprite implements ThreatAgent 
   private def: ThreatDef = THREAT_DEFS.free_radical
   kind: ThreatKind = 'free_radical'
   speed = 0
-  readonly state: Record<string, number> = {}
+  readonly behaviorState: Record<string, number> = {}
 
   private hp = 1
   private intensity = 1
@@ -34,7 +34,7 @@ export class Threat extends Phaser.Physics.Arcade.Sprite implements ThreatAgent 
     this.intensity = intensity
     this.hp = this.def.radius * 2 + this.def.damage * 1.5 + 8
     this.ageMs = 0
-    for (const key of Object.keys(this.state)) delete this.state[key]
+    for (const key of Object.keys(this.behaviorState)) delete this.behaviorState[key]
 
     this.setTexture(this.def.textureKey)
     this.enableBody(true, x, y, true, true)
